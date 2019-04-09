@@ -1,0 +1,51 @@
+'''***************************************************************
+Author: Avra Saslow, Trevor Stanley, Xingying Huang
+Date: April 8th, 2019
+Purpose: Proximity to transmission lines and substations function
+***************************************************************'''
+#libraries
+from time import clock
+start = clock()
+import numpy as np
+import arcpy
+from arcpy import env
+import arcpy.sa as sa
+from math import sqrt
+arcpy.CheckOutExtension("Spatial")
+from arcpy.sa import *
+
+#workspace
+env.workspace = r"D:\solar project\solar project\data"
+env.overwriteOutput = 1
+
+
+print "*******Part 1*********"
+#transmission lines 
+lines = "CO_Electric_Power_Transmission_Lines-line.shp"
+#substations
+stations = "CO_Electric_Substations-point.shp"
+
+# Execute KernelDensity
+linesKD = KernelDensity(lines, None, 60)
+
+arcpy.Delete_management(env.workspace + '\linesKD')
+# Save the output 
+linesKD.save(env.workspace + '\linesKD')
+
+linesraster = env.workspace + '\linesKD'
+
+#convert to matrix
+raster = arcpy.sa.Raster(linesraster)
+linesArray = arcpy.RasterToNumPyArray(raster).astype(float)
+
+def focalMean(linesArray):
+    linesmeanArray = np.zeros(linesArray.shape).astype(float)
+    row = 0
+    col = 0
+    for row in range(5, np.size(linesArray,0)-5):
+        for col in range(4, np.size(linesArray,1)-4):
+            window = linesArray[row-5:row+6, col-4:col+5]
+            count = np.sum(window)
+            mean = float(count) / 99
+            linesmeanArray[row][col] = mean
+    return linesmeanArray       
